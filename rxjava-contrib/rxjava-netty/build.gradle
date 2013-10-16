@@ -1,0 +1,18 @@
+apply plugin: 'osgi'
+
+sourceCompatibility = JavaVersion.VERSION_1_6
+targetCompatibility = JavaVersion.VERSION_1_6
+
+dependencies {
+    compile project(':rxjava-core')
+    compile 'io.netty:netty-all:4.0.10.Final'
+}
+
+jar {
+    manifest {
+        name = 'rxjava-netty'
+        instruction 'Bundle-Vendor', 'Netflix'
+        instruction 'Bundle-DocURL', 'https://github.com/Netflix/RxJava'
+        instruction 'Import-Package', '!org.junit,!junit.framework,!org.mockito.*,*'
+    }
+}
