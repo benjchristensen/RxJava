@@ -27,12 +27,18 @@ subprojects {
     apply plugin: 'idea'
 
     group = "com.netflix.rxjava"
+	
+	// make 'examples' use the same classpath
+	configurations {
+	    // add new configuration
+	    examples
 
-    // make 'examples' use the same classpath
-    configurations { 
-        examplesCompile.extendsFrom compile
+	    //adding a configuration that extends existing configuration:
+	    //(testCompile was added by the java plugin)
+	    examples.extendsFrom(compile)
+	    examplesCompile.extendsFrom(compile)
         examplesRuntime.extendsFrom runtime
-    }
+	}
 
     sourceSets.test.java.srcDir 'src/main/java'
 
@@ -41,9 +47,12 @@ subprojects {
     }
 
     //include /src/examples folder
-    sourceSets { 
-        examples
-    }
+	sourceSets {
+        examples {
+            // no idea why this is needed
+            java.srcDirs = []
+        }
+	}
     
     //include 'examples' in build task
     tasks.build { 
@@ -54,6 +63,7 @@ subprojects {
         classpath {  
             // include 'provided' dependencies on the classpath
             plusConfigurations += configurations.provided
+            plusConfigurations += configurations.examples
             
             downloadSources = true
             downloadJavadoc = true
@@ -63,6 +73,7 @@ subprojects {
     idea {
         module {
             // include 'provided' dependencies on the classpath
+            scopes.PROVIDED.plus += configurations.provided
             scopes.PROVIDED.plus += configurations.provided
         }
     }

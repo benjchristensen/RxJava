@@ -64,7 +64,7 @@ public class IntervalServer {
                 });
     }
 
-    private static Subscription startInterval(final TcpConnection connection) {
+    public static Subscription startInterval(final TcpConnection connection) {
         return Observable.interval(1000, TimeUnit.MILLISECONDS)
                 .flatMap(new Func1<Long, Observable<Notification<Void>>>() {
 
