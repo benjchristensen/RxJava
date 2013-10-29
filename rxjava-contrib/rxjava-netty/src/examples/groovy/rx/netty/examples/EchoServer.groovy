@@ -1,44 +1,35 @@
-package rx.netty.examples;
+package rx.netty.examples
 
-import io.netty.buffer.ByteBuf;
+import rx.Observable
+import rx.Subscription
+import rx.netty.experimental.RxNetty
+import rx.netty.experimental.impl.TcpConnection
+import rx.netty.experimental.protocol.ProtocolHandlers
 
-import java.nio.charset.Charset;
+class EchoServer {
 
-import rx.Observable;
-import rx.netty.experimental.RxNetty;
-import rx.netty.experimental.impl.TcpConnection;
-import rx.util.functions.Action1;
-import rx.util.functions.Func1;
+    def static void main(String[] args) {
 
-public class EchoServer {
+        Subscription s = RxNetty.createTcpServer(8181, ProtocolHandlers.stringCodec())
+                .onConnect({ TcpConnection<String, String> connection ->
+                    // writing to the connection is the only place where anything is remote
+                    connection.write("Welcome! \n\n")
 
-    public static void main(String[] args) {
-        RxNetty.createTcpServer(8181)
-                // process each connection in parallel
-                .parallel({ Observable<TcpConnection<String, String>> o ->
-                    // for each connection
-                    return o.flatMap({ TcpConnection<String, String> connection ->
-                        // for each message we receive on the connection
-                        return connection.getChannelObservable().map({ String msg ->
-                            return new ReceivedMessage<String>(connection, msg.trim());
-                        });
+                    // perform echo logic and return the transformed output stream that will be subscribed to
+                    return connection.getChannelObservable().flatMap({ String msg ->
+                        // echo the input to the output stream
+                        String s = msg.trim()
+                        if(s.isEmpty()) {
+                            // we skip empty messages
+                            return Observable.empty()
+                        } else {
+                            connection.write("echo => " + s + "\n")
+                            return Observable.just(s)
+                        }
                     });
-                })
-                .toBlockingObservable().forEach({ ReceivedMessage<String> receivedMessage ->
-                    receivedMessage.connection.write("Echo => " + receivedMessage.message + "\n");
-                    System.out.println("Received Message: " + receivedMessage.message);
+                }).toBlockingObservable().forEach({ String o ->
+                    println("onNext: " + o)
                 });
-    }
 
-    def static class ReceivedMessage<I> {
-        // I want value types
-
-        final TcpConnection<I, String> connection;
-        final String message;
-
-        public ReceivedMessage(TcpConnection<I, String> connection, String message) {
-            this.connection = connection;
-            this.message = message;
-        }
     }
 }
