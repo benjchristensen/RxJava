@@ -7,20 +7,32 @@ import java.util.List;
 import java.util.Map;
 
 import rx.Observable;
+import rx.Observer;
 import rx.util.functions.Func1;
-import rx.util.functions.Func2;
+import rx.util.functions.Function;
 
 public class RemoteObservable<T> {
 
-    private final Func2<FilterCriteria, MapProjection, Observable<T>> onSubscribe;
+    private final RemoteOnSubscribeFunc<T> onSubscribe;
     private final FilterCriteria f = new FilterCriteria();
     private final MapProjection m = new MapProjection();
 
-    protected RemoteObservable(Func2<FilterCriteria, MapProjection, Observable<T>> onSubscribe) {
+    /**
+     * Function interface for work to be performed when an {@link Observable} is subscribed to via {@link Observable#subscribe(Observer)}
+     * 
+     * @param <T>
+     */
+    public static interface RemoteOnSubscribeFunc<T> extends Function {
+
+        public RemoteSubscription onSubscribe(RemoteObserver<? super T> observer, FilterCriteria filterCriteria, MapProjection mapProjection);
+
+    }
+
+    protected RemoteObservable(RemoteOnSubscribeFunc<T> onSubscribe) {
         this.onSubscribe = onSubscribe;
     }
 
-    public static <T> RemoteObservable<T> create(Func2<FilterCriteria, MapProjection, Observable<T>> onSubscribe) {
+    public static <T> RemoteObservable<T> create(RemoteOnSubscribeFunc<T> onSubscribe) {
         return new RemoteObservable<T>(onSubscribe);
     }
 
@@ -32,50 +44,45 @@ public class RemoteObservable<T> {
         return new FilteredMappedRemoteObservable<T>(onSubscribe, f, projection.call(m));
     }
 
-    public Observable<T> toObservable() {
-        return onSubscribe.call(f, m);
+    public RemoteSubscription subscribe(RemoteObserver<T> observer) {
+        return onSubscribe.onSubscribe(observer, f, m);
     }
-
-//    public RemoteSubscription subscribe(RemoteObserver<T> observer) {
-//
-//        return null;
-//    }
 
     public static class FilteredRemoteObservable<T> {
 
-        private final Func2<FilterCriteria, MapProjection, Observable<T>> onSubscribe;
+        private final RemoteOnSubscribeFunc<T> onSubscribe;
         private final FilterCriteria f;
         private final MapProjection m;
 
-        public FilteredRemoteObservable(Func2<FilterCriteria, MapProjection, Observable<T>> onSubscribe, FilterCriteria f, MapProjection m) {
+        public FilteredRemoteObservable(RemoteOnSubscribeFunc<T> onSubscribe, FilterCriteria f, MapProjection m) {
             this.onSubscribe = onSubscribe;
             this.f = f;
             this.m = m;
         }
 
         public FilteredMappedRemoteObservable<T> map(Func1<MapProjection, MapProjection> projection) {
-            return new FilteredMappedRemoteObservable(onSubscribe, f, projection.call(m));
+            return new FilteredMappedRemoteObservable<T>(onSubscribe, f, projection.call(m));
         }
 
-        public Observable<T> toObservable() {
-            return onSubscribe.call(f, m);
+        public RemoteSubscription subscribe(RemoteObserver<T> observer) {
+            return onSubscribe.onSubscribe(observer, f, m);
         }
     }
 
     public static class FilteredMappedRemoteObservable<T> {
 
-        private final Func2<FilterCriteria, MapProjection, Observable<T>> onSubscribe;
+        private final RemoteOnSubscribeFunc<T> onSubscribe;
         private final FilterCriteria f;
         private final MapProjection m;
 
-        public FilteredMappedRemoteObservable(Func2<FilterCriteria, MapProjection, Observable<T>> onSubscribe, FilterCriteria f, MapProjection m) {
+        public FilteredMappedRemoteObservable(RemoteOnSubscribeFunc<T> onSubscribe, FilterCriteria f, MapProjection m) {
             this.onSubscribe = onSubscribe;
             this.f = f;
             this.m = m;
         }
 
-        public Observable<T> toObservable() {
-            return onSubscribe.call(f, m);
+        public RemoteSubscription subscribe(RemoteObserver<T> observer) {
+            return onSubscribe.onSubscribe(observer, f, m);
         }
     }
 
