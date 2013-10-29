@@ -18,7 +18,7 @@ public class IntervalClientWithDisconnect {
 
     public void run() {
         RxNetty.createTcpClient("localhost", 8181)
-                .flatMap({ TcpConnection connection ->
+                .flatMap({ TcpConnection<ByteBuf, String> connection ->
                     System.out.println("received connection: " + connection);
 
                     Observable<String> subscribeMessage = connection.write("subscribe:")

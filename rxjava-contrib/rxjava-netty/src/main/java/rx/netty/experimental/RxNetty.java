@@ -15,6 +15,7 @@
  */
 package rx.netty.experimental;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 
@@ -25,6 +26,8 @@ import rx.Observable;
 import rx.netty.experimental.impl.NettyClient;
 import rx.netty.experimental.impl.NettyServer;
 import rx.netty.experimental.impl.TcpConnection;
+import rx.netty.experimental.protocol.ProtocolHandler;
+import rx.netty.experimental.protocol.ProtocolHandlers;
 
 public class RxNetty {
 
@@ -45,21 +48,37 @@ public class RxNetty {
         private static NioEventLoopGroup WORKER = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors(), THREAD_FACTORY);
     }
 
-    public static Observable<TcpConnection> createTcpServer(final int port, final EventLoopGroup acceptorEventLoops, final EventLoopGroup workerEventLoops) {
-        return NettyServer.createServer(port, acceptorEventLoops, workerEventLoops);
+    public static Observable<TcpConnection<String, String>> createTcpServer(final int port, final EventLoopGroup acceptorEventLoops, final EventLoopGroup workerEventLoops) {
+        return NettyServer.createServer(port, acceptorEventLoops, workerEventLoops, ProtocolHandlers.stringCodec());
     }
 
-    public static Observable<TcpConnection> createTcpServer(int port) {
+    public static Observable<TcpConnection<String, String>> createTcpServer(int port) {
         return createTcpServer(port, DEFAULT_EVENT_LOOPS.ACCEPTOR, DEFAULT_EVENT_LOOPS.WORKER);
     }
 
-    public static Observable<TcpConnection> createTcpClient(final String host, final int port, final EventLoopGroup eventLoops) {
-        return NettyClient.createClient(host, port, eventLoops);
+    public static <I, O> Observable<TcpConnection<I, O>> createTcpServer(int port, ProtocolHandler<I, O> handler) {
+        return createTcpServer(port, DEFAULT_EVENT_LOOPS.ACCEPTOR, DEFAULT_EVENT_LOOPS.WORKER, handler);
     }
 
-    public static Observable<TcpConnection> createTcpClient(String host, int port) {
-        return createTcpClient(host, port, DEFAULT_EVENT_LOOPS.WORKER);
+    public static <I, O> Observable<TcpConnection<I, O>> createTcpServer(
+        final int port,
+        final EventLoopGroup acceptorEventLoops,
+        final EventLoopGroup workerEventLoops,
+        ProtocolHandler<I, O> handler) {
+
+        return NettyServer.createServer(port, acceptorEventLoops, workerEventLoops, handler);
+    }
+
+    public static Observable<TcpConnection<ByteBuf, String>> createTcpClient(final String host, final int port, final EventLoopGroup eventLoops) {
+        return NettyClient.createClient(host, port, eventLoops, ProtocolHandlers.commandOnlyHandler());
+    }
+
+    public static Observable<TcpConnection<ByteBuf, String>> createTcpClient(String host, int port) {
+        return RxNetty.createTcpClient(host, port, DEFAULT_EVENT_LOOPS.WORKER);
 
     }
 
+    public static <I, O> Observable<TcpConnection<I, O>> createTcpClient(String host, int port, ProtocolHandler<I, O> handler) {
+        return NettyClient.createClient(host, port, DEFAULT_EVENT_LOOPS.WORKER, handler);
+    }
 }

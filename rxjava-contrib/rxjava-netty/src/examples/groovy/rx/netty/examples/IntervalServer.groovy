@@ -21,12 +21,11 @@ class IntervalServer {
     public static Observable<String> createServer(final int port) {
         return RxNetty.createTcpServer(port)
         // process each connection in parallel
-        .parallel({ Observable<TcpConnection> o ->
+        .parallel({ Observable<TcpConnection<String, String>> o ->
             // for each connection
-            return o.flatMap({ TcpConnection connection ->
+            return o.flatMap({ TcpConnection<String, String> connection ->
                 // for each message we receive on the connection
-                return connection.getChannelObservable().map({ ByteBuf bb ->
-                    String msg = bb.toString(Charset.forName("UTF8")).trim();
+                return connection.getChannelObservable().map({ String msg ->
                     if (msg.startsWith("subscribe:")) {
                         System.out.println("-------------------------------------");
                         System.out.println("Received 'subscribe' from client so starting interval ...");
@@ -48,7 +47,7 @@ class IntervalServer {
         });
     }
 
-    public static Subscription startInterval(final TcpConnection connection) {
+    public static Subscription startInterval(final TcpConnection<String, String> connection) {
         return Observable.interval(1000, TimeUnit.MILLISECONDS)
         .flatMap({ Long interval ->
             System.out.println("Writing interval: " + interval);

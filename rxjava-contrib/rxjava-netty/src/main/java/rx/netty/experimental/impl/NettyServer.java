@@ -1,6 +1,7 @@
 package rx.netty.experimental.impl;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -11,16 +12,23 @@ import rx.Observable;
 import rx.Observable.OnSubscribeFunc;
 import rx.Observer;
 import rx.Subscription;
+import rx.netty.experimental.RxNetty;
+import rx.netty.experimental.protocol.ProtocolHandler;
 import rx.subscriptions.Subscriptions;
 import rx.util.functions.Action0;
 
-public class NettyServer {
+public class NettyServer<I, O> {
 
-    public static Observable<TcpConnection> createServer(final int port, final EventLoopGroup acceptorEventLoops, final EventLoopGroup workerEventLoops) {
-        return Observable.create(new OnSubscribeFunc<TcpConnection>() {
+    public static <I, O> Observable<TcpConnection<I, O>> createServer(
+        final int port,
+        final EventLoopGroup acceptorEventLoops,
+        final EventLoopGroup workerEventLoops,
+        final ProtocolHandler<I, O> handler) {
+
+        return Observable.create(new OnSubscribeFunc<TcpConnection<I, O>>() {
 
             @Override
-            public Subscription onSubscribe(final Observer<? super TcpConnection> observer) {
+            public Subscription onSubscribe(final Observer<? super TcpConnection<I, O>> observer) {
                 try {
                     ServerBootstrap b = new ServerBootstrap();
                     b.group(acceptorEventLoops, workerEventLoops)
@@ -31,8 +39,10 @@ public class NettyServer {
                             .childHandler(new ChannelInitializer<SocketChannel>() {
                                 @Override
                                 public void initChannel(SocketChannel ch) throws Exception {
+                                    handler.configure(ch.pipeline());
+
                                     // add the handler that will emit responses to the observer
-                                    ch.pipeline().addLast(new HandlerObserver(observer));
+                                    ch.pipeline().addLast(new HandlerObserver<I, O>(observer));
                                 }
                             });
 

@@ -1,30 +1,21 @@
 package rx.netty.experimental.impl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import rx.Observer;
 
-public class HandlerObserver extends ChannelInboundHandlerAdapter {
+public class HandlerObserver<I, O> extends ChannelInboundHandlerAdapter {
 
-    private final Observer<? super TcpConnection> observer;
-    private volatile TcpConnection connection;
+    private final Observer<? super TcpConnection<I, O>> observer;
+    private volatile TcpConnection<I, O> connection;
 
-    public HandlerObserver(Observer<? super TcpConnection> observer) {
+    public HandlerObserver(Observer<? super TcpConnection<I, O>> observer) {
         this.observer = observer;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof ByteBuf) {
-            connection.getChannelObserver().onNext((ByteBuf) msg);
-        } else {
-            connection.getChannelObserver().onError(new RuntimeException("Unexpected message type: " + msg));
-        }
-    }
-
-    @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        connection.getChannelObserver().onNext((I) msg);
     }
 
     @Override
