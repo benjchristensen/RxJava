@@ -11,29 +11,33 @@ import rx.Observable;
 import rx.Observable.OnSubscribeFunc;
 import rx.Observer;
 import rx.Subscription;
+import rx.netty.experimental.protocol.ProtocolHandler;
 import rx.subscriptions.Subscriptions;
 import rx.util.functions.Action0;
 
 public class NettyClient {
 
-    public static Observable<TcpConnection> createClient(final String host, final int port, final EventLoopGroup eventLoops) {
-        return Observable.create(new OnSubscribeFunc<TcpConnection>() {
+    public static <I, O> Observable<TcpConnection<I, O>> createClient(final String host, final int port, final EventLoopGroup eventLoops, final ProtocolHandler<I, O> handler) {
+        return Observable.create(new OnSubscribeFunc<TcpConnection<I, O>>() {
 
             @Override
-            public Subscription onSubscribe(final Observer<? super TcpConnection> observer) {
+            public Subscription onSubscribe(final Observer<? super TcpConnection<I, O>> observer) {
                 try {
                     Bootstrap b = new Bootstrap();
                     b.group(eventLoops)
-                            .channel(NioSocketChannel.class)
+                        .channel(NioSocketChannel.class)
                             // TODO allow ChannelOptions to be passed in
-                            .option(ChannelOption.TCP_NODELAY, true)
-                            .handler(new ChannelInitializer<SocketChannel>() {
-                                @Override
-                                public void initChannel(SocketChannel ch) throws Exception {
-                                    // add the handler that will emit responses to the observer
-                                    ch.pipeline().addLast(new HandlerObserver(observer));
-                                }
-                            });
+                        .option(ChannelOption.TCP_NODELAY, true)
+                        .handler(new ChannelInitializer<SocketChannel>() {
+                            @Override
+                            public void initChannel(SocketChannel ch) throws Exception {
+                                handler.configure(ch.pipeline());
+
+                                // add the handler that will emit responses to the observer
+                                ch.pipeline()
+                                    .addLast(new HandlerObserver<I, O>(observer));
+                            }
+                        });
 
                     // make the connection
                     final ChannelFuture f = b.connect(host, port).sync();

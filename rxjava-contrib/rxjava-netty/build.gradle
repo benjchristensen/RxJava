@@ -6,6 +6,9 @@ targetCompatibility = JavaVersion.VERSION_1_6
 dependencies {
     compile project(':rxjava-core')
     compile 'io.netty:netty-all:4.0.10.Final'
+    compile 'com.google.guava:guava:11.0.2'
+    compile 'org.slf4j:slf4j-api:1.6.3'
+    runtime 'org.slf4j:slf4j-simple:1.7.0'
 }
 
 jar {

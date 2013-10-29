@@ -23,21 +23,21 @@ public class IntervalServer {
     public static Observable<String> createServer(final int port) {
         return RxNetty.createTcpServer(port)
                 // process each connection in parallel
-                .parallel(new Func1<Observable<TcpConnection>, Observable<String>>() {
+                .parallel(new Func1<Observable<TcpConnection<String, String>>, Observable<String>>() {
 
                     @Override
-                    public Observable<String> call(Observable<TcpConnection> o) {
+                    public Observable<String> call(Observable<TcpConnection<String, String>> o) {
                         // for each connection 
-                        return o.flatMap(new Func1<TcpConnection, Observable<String>>() {
+                        return o.flatMap(new Func1<TcpConnection<String, String>, Observable<String>>() {
 
                             @Override
-                            public Observable<String> call(final TcpConnection connection) {
+                            public Observable<String> call(final TcpConnection<String, String> connection) {
                                 // for each message we receive on the connection
-                                return connection.getChannelObservable().map(new Func1<ByteBuf, String>() {
+                                return connection.getChannelObservable().map(new Func1<String, String>() {
 
                                     @Override
-                                    public String call(ByteBuf bb) {
-                                        String msg = bb.toString(Charset.forName("UTF8")).trim();
+                                    public String call(String msg) {
+                                        msg = msg.trim();
                                         if (msg.startsWith("subscribe:")) {
                                             System.out.println("-------------------------------------");
                                             System.out.println("Received 'subscribe' from client so starting interval ...");
@@ -64,7 +64,7 @@ public class IntervalServer {
                 });
     }
 
-    private static Subscription startInterval(final TcpConnection connection) {
+    private static Subscription startInterval(final TcpConnection<String, String> connection) {
         return Observable.interval(1000, TimeUnit.MILLISECONDS)
                 .flatMap(new Func1<Long, Observable<Notification<Void>>>() {
 

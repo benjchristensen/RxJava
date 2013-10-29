@@ -1,7 +1,5 @@
 package rx.netty.experimental.impl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
@@ -16,23 +14,23 @@ import rx.subscriptions.Subscriptions;
 import rx.util.functions.Action0;
 import rx.util.functions.Action1;
 
-public class TcpConnection {
+public class TcpConnection<I, O> {
 
-    private final PublishSubject<ByteBuf> s;
+    private final PublishSubject<I> s;
     private final ChannelHandlerContext ctx;
     private volatile CompositeSubscription subscriptions = new CompositeSubscription();
 
-    protected TcpConnection(ChannelHandlerContext ctx, final PublishSubject<ByteBuf> s) {
+    protected TcpConnection(ChannelHandlerContext ctx, final PublishSubject<I> s) {
         this.ctx = ctx;
         this.s = s;
     }
 
-    public Observable<ByteBuf> getChannelObservable() {
+    public Observable<I> getChannelObservable() {
         return s;
     }
 
-    /* package */Observer<ByteBuf> getChannelObserver() {
-        return new Observer<ByteBuf>() {
+    /* package */Observer<I> getChannelObserver() {
+        return new Observer<I>() {
             public synchronized void onCompleted() {
                 s.onCompleted();
                 subscriptions.unsubscribe();
@@ -43,14 +41,14 @@ public class TcpConnection {
                 subscriptions.unsubscribe();
             }
 
-            public void onNext(ByteBuf o) {
+            public void onNext(I o) {
                 s.onNext(o);
             }
         };
     }
 
-    public static TcpConnection create(ChannelHandlerContext ctx) {
-        return new TcpConnection(ctx, PublishSubject.<ByteBuf> create());
+    public static <I, O> TcpConnection<I, O> create(ChannelHandlerContext ctx) {
+        return new TcpConnection<I, O>(ctx, PublishSubject.<I> create());
     }
 
     public synchronized void unsubscribe() {
@@ -62,21 +60,13 @@ public class TcpConnection {
         subscriptions.add(s);
     }
 
-    public Observable<Void> write(final String msg) {
-        return write(Unpooled.wrappedBuffer(msg.getBytes()));
-    }
-
-    public Observable<Void> write(final byte[] msg) {
-        return write(Unpooled.wrappedBuffer(msg));
-    }
-
     /**
      * Note that this eagerly subscribes. It is NOT lazy.
      * 
      * @param msg
      * @return
      */
-    public Observable<Void> write(final ByteBuf msg) {
+    public Observable<Void> write(final O msg) {
         Observable<Void> o = Observable.create(new OnSubscribeFunc<Void>() {
 
             @Override
@@ -116,6 +106,7 @@ public class TcpConnection {
 
             @Override
             public void call(Throwable cause) {
+                cause.printStackTrace();
                 System.out.println("cached error: " + cause);
                 // do nothing, it will be cached for the other subscribers
             }
