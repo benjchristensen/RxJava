@@ -19,7 +19,7 @@ public class EchoServer {
                     // for each connection
                     return o.flatMap({ TcpConnection<String, String> connection ->
                         // for each message we receive on the connection
-                        return connection.getChannelObservable().map({ String bb ->
+                        return connection.getChannelObservable().map({ String msg ->
                             return new ReceivedMessage<String>(connection, msg.trim());
                         });
                     });
