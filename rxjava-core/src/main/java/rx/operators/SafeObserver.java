@@ -75,7 +75,8 @@ public class SafeObserver<T> implements Observer<T> {
                 // handle errors if the onCompleted implementation fails, not just if the Observable fails
                 onError(e);
             }
-            // auto-unsubscribe
+            // auto-unsubscribe ... see Rx Guideline 4.3
+            // The Rx contract for cleanup ensures that unsubscription will be called automatically once an OnError or OnCompleted message is sent.
             subscription.unsubscribe();
         }
     }
@@ -109,7 +110,8 @@ public class SafeObserver<T> implements Observer<T> {
                     throw new RuntimeException("Error occurred when trying to propagate error to Observer.onError", new CompositeException(Arrays.asList(e, e2)));
                 }
             }
-            // auto-unsubscribe
+            // auto-unsubscribe ... see Rx Guideline 4.3
+            // The Rx contract for cleanup ensures that unsubscription will be called automatically once an OnError or OnCompleted message is sent.
             subscription.unsubscribe();
         }
     }
