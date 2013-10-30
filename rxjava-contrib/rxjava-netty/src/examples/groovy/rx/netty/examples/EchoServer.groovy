@@ -1,6 +1,5 @@
 package rx.netty.examples
 
-import rx.Observable
 import rx.Subscription
 import rx.netty.experimental.RxNetty
 import rx.netty.experimental.impl.TcpConnection
@@ -16,16 +15,12 @@ class EchoServer {
                     connection.write("Welcome! \n\n")
 
                     // perform echo logic and return the transformed output stream that will be subscribed to
-                    return connection.getChannelObservable().flatMap({ String msg ->
+                    return connection.getChannelObservable()
+                    .map({ String msg -> msg.trim() })
+                    .filter({String msg -> !msg.isEmpty()})
+                    .flatMap({ String msg ->
                         // echo the input to the output stream
-                        String s = msg.trim()
-                        if(s.isEmpty()) {
-                            // we skip empty messages
-                            return Observable.empty()
-                        } else {
-                            connection.write("echo => " + s + "\n")
-                            return Observable.just(s)
-                        }
+                        return connection.write("echo => " + msg + "\n")
                     });
                 }).toBlockingObservable().forEach({ String o ->
                     println("onNext: " + o)
