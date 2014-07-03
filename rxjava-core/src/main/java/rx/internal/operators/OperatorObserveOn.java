@@ -67,7 +67,6 @@ public final class OperatorObserveOn<T> implements Operator<T, T> {
         final Subscriber<? super T> child;
         private final Scheduler.Worker recursiveScheduler;
         private final ScheduledUnsubscribe scheduledUnsubscribe;
-        final NotificationLite<T> on = NotificationLite.instance();
 
         private final RxRingBuffer queue = RxRingBuffer.getSpscInstance();
         private boolean completed = false;
@@ -158,7 +157,7 @@ public final class OperatorObserveOn<T> implements Operator<T, T> {
                             REQUESTED.incrementAndGet(this);
                             break;
                         } else {
-                            if (!on.accept(child, o)) {
+                            if (!queue.accept(o, child)) {
                                 // non-terminal event so let's increment count
                                 emitted++;
                             }

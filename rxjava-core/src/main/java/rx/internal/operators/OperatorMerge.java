@@ -47,7 +47,6 @@ public final class OperatorMerge<T> implements Operator<T, Observable<? extends 
     }
 
     private static final class MergeSubscriber<T> extends Subscriber<Observable<? extends T>> {
-        final NotificationLite<T> on = NotificationLite.instance();
         final Subscriber<? super T> actual;
         private final MergeProducer<T> mergeProducer;
         private int wip;
@@ -55,7 +54,7 @@ public final class OperatorMerge<T> implements Operator<T, Observable<? extends 
 
         private SubscriptionIndexedRingBuffer<InnerSubscriber<T>> childrenSubscribers;
 
-        private RxRingBuffer scalarValueQueue = null;
+        private RxRingBuffer<T> scalarValueQueue = null;
 
         /* protected by lock on MergeSubscriber instance */
         private int missedEmitting = 0;
@@ -274,7 +273,7 @@ public final class OperatorMerge<T> implements Operator<T, Observable<? extends 
                     // drain it all
                     Object o = null;
                     while ((o = scalarValueQueue.poll()) != null) {
-                        on.accept(actual, o);
+                        scalarValueQueue.accept(o, actual);
                         emittedWhileDraining++;
                     }
                 } else if (r > 0) {
@@ -285,7 +284,7 @@ public final class OperatorMerge<T> implements Operator<T, Observable<? extends 
                         if (o == null) {
                             break;
                         } else {
-                            on.accept(actual, o);
+                            scalarValueQueue.accept(o, actual);
                             emittedWhileDraining++;
                         }
                     }
@@ -445,7 +444,7 @@ public final class OperatorMerge<T> implements Operator<T, Observable<? extends 
         volatile int once;
         @SuppressWarnings("rawtypes")
         static final AtomicIntegerFieldUpdater<InnerSubscriber> ONCE_UPDATER = AtomicIntegerFieldUpdater.newUpdater(InnerSubscriber.class, "once");
-        private final RxRingBuffer q = RxRingBuffer.getSpmcInstance();
+        private final RxRingBuffer<T> q = RxRingBuffer.getSpmcInstance();
         private boolean mayNeedToDrain = false;
         /* protected by emitLock */
         int emitted = 0;
