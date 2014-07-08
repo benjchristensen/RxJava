@@ -15,8 +15,11 @@
  */
 package rx.internal.util;
 
+import org.omg.CORBA.portable.IndirectionException;
+
 import java.util.Queue;
 
+import rx.Notification;
 import rx.Observer;
 import rx.Subscription;
 import rx.exceptions.MissingBackpressureException;
@@ -25,21 +28,21 @@ import rx.internal.util.unsafe.SpmcArrayQueue;
 import rx.internal.util.unsafe.SpscArrayQueue;
 import rx.internal.util.unsafe.UnsafeAccess;
 
-public class RxRingBuffer implements Subscription {
+public class RxRingBuffer<T> implements Subscription {
 
-    public static RxRingBuffer getSpscInstance() {
+    public static <T> RxRingBuffer<T> getSpscInstance() {
         if (UnsafeAccess.isUnsafeAvailable()) {
-            return new RxRingBuffer(SPSC_POOL, SIZE);
+            return new RxRingBuffer<T>(SPSC_POOL, SIZE);
         } else {
-            return new RxRingBuffer();
+            return new RxRingBuffer<T>();
         }
     }
 
-    public static RxRingBuffer getSpmcInstance() {
+    public static <T> RxRingBuffer<T> getSpmcInstance() {
         if (UnsafeAccess.isUnsafeAvailable()) {
-            return new RxRingBuffer(SPMC_POOL, SIZE);
+            return new RxRingBuffer<T>(SPMC_POOL, SIZE);
         } else {
-            return new RxRingBuffer();
+            return new RxRingBuffer<T>();
         }
     }
 
@@ -123,7 +126,7 @@ public class RxRingBuffer implements Subscription {
      * } </pre>
      */
 
-    private static final NotificationLite<Object> on = NotificationLite.instance();
+    private final NotificationLite<T> on = NotificationLite.instance();
 
     private Queue<Object> queue;
 
@@ -188,7 +191,7 @@ public class RxRingBuffer implements Subscription {
      * @throws MissingBackpressureException
      *             if more onNext are sent than have been requested
      */
-    public void onNext(Object o) throws MissingBackpressureException {
+    public void onNext(T o) throws MissingBackpressureException {
         if (queue == null) {
             throw new IllegalStateException("This instance has been unsubscribed and the queue is no longer usable.");
         }
@@ -256,10 +259,13 @@ public class RxRingBuffer implements Subscription {
     public Throwable asError(Object o) {
         return on.getError(o);
     }
+    
+    public T asValue(Object o) {
+        return on.getValue(o);
+    }
 
     @Override
     public boolean isUnsubscribed() {
         return queue == null;
     }
-
 }
