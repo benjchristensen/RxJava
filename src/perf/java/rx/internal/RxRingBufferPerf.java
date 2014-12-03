@@ -28,6 +28,9 @@ import rx.exceptions.MissingBackpressureException;
 import rx.internal.util.RxRingBuffer;
 import rx.jmh.InputWithIncrementingInteger;
 
+/**
+ * gradlew benchmarks "-Pjmh=-f 1 -tu s -bm thrpt -wi 5 -i 5 -r 1 .*RxRingBufferPerf.*"
+ */
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class RxRingBufferPerf {
@@ -40,10 +43,10 @@ public class RxRingBufferPerf {
 
     @Benchmark
     public void spmcRingBufferAddRemove1000(SpmcInput input) throws InterruptedException, MissingBackpressureException {
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             input.ring.onNext("a");
         }
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             input.bh.consume(input.ring.poll());
         }
     }
@@ -51,10 +54,10 @@ public class RxRingBufferPerf {
     @Benchmark
     public void spmcCreateUseAndDestroy1000(Input input) throws InterruptedException, MissingBackpressureException {
         RxRingBuffer buffer = RxRingBuffer.getSpmcInstance();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             buffer.onNext("a");
         }
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             input.bh.consume(buffer.poll());
         }
         buffer.release();
@@ -76,10 +79,10 @@ public class RxRingBufferPerf {
 
     @Benchmark
     public void spscRingBufferAddRemove1000(SpscInput input) throws InterruptedException, MissingBackpressureException {
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             input.ring.onNext("a");
         }
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             input.bh.consume(input.ring.poll());
         }
     }
@@ -87,10 +90,10 @@ public class RxRingBufferPerf {
     @Benchmark
     public void spscCreateUseAndDestroy1000(Input input) throws InterruptedException, MissingBackpressureException {
         RxRingBuffer buffer = RxRingBuffer.getSpscInstance();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             buffer.onNext("a");
         }
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < RxRingBuffer.SIZE; i++) {
             input.bh.consume(buffer.poll());
         }
         buffer.release();
