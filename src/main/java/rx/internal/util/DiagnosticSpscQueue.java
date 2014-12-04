@@ -32,67 +32,106 @@ public final class DiagnosticSpscQueue<T> extends AbstractQueue<T> {
     final AtomicReference<Thread> readerThread;
     final AtomicReference<Thread> writerThread;
     final boolean watchThread;
-    public DiagnosticSpscQueue(Queue<T> actual) {
+    public DiagnosticSpscQueue(Queue<T> actual, boolean watchThread) {
         this.actual = actual;
         this.readers = new AtomicInteger();
         this.writers = new AtomicInteger();
         this.readerThread = new AtomicReference<Thread>();
         this.writerThread = new AtomicReference<Thread>();
-        this.watchThread = true;
+        this.watchThread = watchThread;
     }
     void sleep() {
         try {
-            Thread.sleep(100);
+            Thread.sleep(10);
         } catch (InterruptedException ex) {
             // ignored
         }
     }
     void writerEnter() {
-        int wc = writers.incrementAndGet();
-        if (wc != 0) {
-            writers.decrementAndGet();
-            throw new IllegalStateException("Multiple writers on enter: " + wc);
+        if (watchThread) {
+            for (;;) {
+                Thread t = writerThread.get();
+                if (t != null) {
+                    System.out.println(Arrays.toString(t.getStackTrace()));
+                    throw new IllegalStateException("Another writer thread: " + t + " (we are " + Thread.currentThread() + ")");
+                }
+                if (writerThread.compareAndSet(null, Thread.currentThread())) {
+                    break;
+                }
+            }
+        } else {
+            int wc = writers.getAndIncrement();
+            if (wc != 0) {
+                throw new IllegalStateException("Multiple writers on enter: " + wc);
+            }
         }
-        sleep();
+//        sleep();
     }
     void writerLeave() {
-        int wc = writers.decrementAndGet();
-        if (wc != 0) {
-            throw new IllegalStateException("Multiple writers on enter: " + wc);
+        if (watchThread) {
+            writerThread.set(null);
+        } else {
+            int wc = writers.decrementAndGet();
+            if (wc != 0) {
+                throw new IllegalStateException("Multiple writers on enter: " + wc);
+            }
         }
     }
     void readerEnter() {
-        int rc = readers.incrementAndGet();
-        if (rc != 0) {
-            throw new IllegalStateException("Multiple readers on enter: " + rc);
+        if (watchThread) {
+            for (;;) {
+                Thread t = readerThread.get();
+                if (t != null) {
+                    System.out.println(Arrays.toString(t.getStackTrace()));
+                    throw new IllegalStateException("Another writer thread: " + t + " (we are " + Thread.currentThread() + ")");
+                }
+                if (readerThread.compareAndSet(null, Thread.currentThread())) {
+                    break;
+                }
+            }
+        } else {
+            int rc = readers.getAndIncrement();
+            if (rc != 0) {
+                throw new IllegalStateException("Multiple readers on enter: " + rc);
+            }
         }
-        sleep();
+//        sleep();
     }
     void readerLeave() {
-        int rc = readers.decrementAndGet();
-        if (rc != 0) {
-            throw new IllegalStateException("Multiple writers on enter: " + rc);
+        if (watchThread) {
+            readerThread.set(null);
+        } else {
+            int rc = readers.decrementAndGet();
+            if (rc != 0) {
+                throw new IllegalStateException("Multiple writers on enter: " + rc);
+            }
         }
     }
     @Override
     public boolean offer(T e) {
+        writerEnter();
         try {
             return actual.offer(e);
         } finally {
+            writerLeave();
         }
     }
     @Override
     public T poll() {
+        readerEnter();
         try {
             return actual.poll();
         } finally {
+            readerLeave();
         }
     }
     @Override
     public T peek() {
+        readerEnter();
         try {
             return actual.peek();
         } finally {
+            readerLeave();
         }
     }
     @Override
@@ -101,9 +140,11 @@ public final class DiagnosticSpscQueue<T> extends AbstractQueue<T> {
     }
     @Override
     public int size() {
+        readerEnter();
         try {
             return actual.size();
         } finally {
+            readerLeave();
         }
     }
     

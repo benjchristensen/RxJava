@@ -31,14 +31,14 @@ public class RxRingBuffer implements Subscription {
     public static RxRingBuffer getSpscInstance() {
         Queue<Object> q;
         boolean bounded;
-        if (UnsafeAccess.isUnsafeAvailable()) {
-            q = new AtomicArrayQueueUnsafe(4, SIZE);
-            bounded = true;
-        } else {
+//        if (UnsafeAccess.isUnsafeAvailable()) {
+//            q = new AtomicArrayQueueUnsafe(4, SIZE);
+//            bounded = true;
+//        } else {
             q = new SpscLinkedQueue<Object>();
             bounded = false;
-        }
-        q = new DiagnosticSpscQueue<Object>(q);
+//        }
+//        q = new DiagnosticSpscQueue<Object>(q, true);
         return new RxRingBuffer(q, SIZE, bounded);
     }
 
@@ -47,16 +47,16 @@ public class RxRingBuffer implements Subscription {
         // TODO right now this is returning an Spsc queue. Why did anything need Spmc before?
         Queue<Object> q;
         boolean bounded;
-//        if (UnsafeAccess.isUnsafeAvailable()) {
+        if (UnsafeAccess.isUnsafeAvailable()) {
 //            q = new AtomicArrayQueue(4, SIZE);
 //            q = new SpscArrayQueue<Object>(SIZE * 2); // the lookahead gives trouble with the effective capacity
             q = new AtomicArrayQueueUnsafe(4, SIZE); // the lookahead gives trouble with the effective capacity
             bounded = true;
-//        } else {
-//            q = new SpscLinkedQueue<Object>();
-//            bounded = false;
-//        }
-        q = new DiagnosticSpscQueue<Object>(q);
+        } else {
+            q = new SpscLinkedQueue<Object>();
+            bounded = false;
+        }
+//        q = new DiagnosticSpscQueue<Object>(q, false);
         return new RxRingBuffer(q, SIZE, bounded);
     }
 

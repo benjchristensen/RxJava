@@ -125,7 +125,7 @@ public class AtomicArrayQueueUnsafe extends AbstractQueue<Object> {
 
         // move the front to the back
         boolean caughtUp = false;
-        long j = calcOffset(wi, n2 - 1) - arrayIndexSize;
+        long j = calcOffset(wi - 1, n2 - 1);
         for (long i = wo - arrayIndexSize; i >= arrayOffset; i -= arrayIndexSize, j -= arrayIndexSize) {
             Object o = lvElement(b, i);
             if (o == null || !casElement(b, i, o, TOMBSTONE)) {
