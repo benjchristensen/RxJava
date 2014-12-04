@@ -29,14 +29,35 @@ import rx.internal.util.unsafe.*;
 public class RxRingBuffer implements Subscription {
 
     public static RxRingBuffer getSpscInstance() {
-//        return new RxRingBuffer(new SpscLinkedQueue<Object>(), SIZE);
-        return new RxRingBuffer(new SpscLinkedQueue<Object>(), SIZE);
+        Queue<Object> q;
+        boolean bounded;
+        if (UnsafeAccess.isUnsafeAvailable()) {
+            q = new AtomicArrayQueueUnsafe(4, SIZE);
+            bounded = true;
+        } else {
+            q = new SpscLinkedQueue<Object>();
+            bounded = false;
+        }
+        q = new DiagnosticSpscQueue<Object>(q);
+        return new RxRingBuffer(q, SIZE, bounded);
     }
 
     @Deprecated
     public static RxRingBuffer getSpmcInstance() {
         // TODO right now this is returning an Spsc queue. Why did anything need Spmc before?
-        return new RxRingBuffer(new AtomicArrayQueueUnsafe2(4, SIZE), SIZE);
+        Queue<Object> q;
+        boolean bounded;
+//        if (UnsafeAccess.isUnsafeAvailable()) {
+//            q = new AtomicArrayQueue(4, SIZE);
+//            q = new SpscArrayQueue<Object>(SIZE * 2); // the lookahead gives trouble with the effective capacity
+            q = new AtomicArrayQueueUnsafe(4, SIZE); // the lookahead gives trouble with the effective capacity
+            bounded = true;
+//        } else {
+//            q = new SpscLinkedQueue<Object>();
+//            bounded = false;
+//        }
+        q = new DiagnosticSpscQueue<Object>(q);
+        return new RxRingBuffer(q, SIZE, bounded);
     }
 
     private static final NotificationLite<Object> on = NotificationLite.instance();
@@ -44,6 +65,8 @@ public class RxRingBuffer implements Subscription {
     private Queue<Object> queue;
 
     private final int size;
+    /** The queue itself is bounded. */
+    private final boolean isBounded;
     
     /** Keeps track how many items were produced. */
     private long producerIndexCached;
@@ -181,10 +204,10 @@ public class RxRingBuffer implements Subscription {
     }
     public static final int SIZE = _size;
 
-    
-    private RxRingBuffer(Queue<Object> queue, int size) {
+    /* test */ RxRingBuffer(Queue<Object> queue, int size, boolean bounded) {
         this.queue = queue;
         this.size = size;
+        this.isBounded = bounded;
     }
 
     @Deprecated
@@ -197,7 +220,7 @@ public class RxRingBuffer implements Subscription {
     }
 
     /* package accessible for unit tests */RxRingBuffer() {
-        this(new SynchronizedQueue<Object>(SIZE), SIZE);
+        this(new SynchronizedQueue<Object>(SIZE), SIZE, false);
     }
 
     /**
@@ -212,6 +235,11 @@ public class RxRingBuffer implements Subscription {
             throw new IllegalStateException("This instance has been unsubscribed and the queue is no longer usable.");
         }
         
+        if (isBounded) {
+            if (!q.offer(on.next(o))) {
+                throw new MissingBackpressureException();
+            }
+        } else
         if(producerQueueSize() < size) {
             produce();
             q.offer(on.next(o));
@@ -275,8 +303,12 @@ public class RxRingBuffer implements Subscription {
     }
     
     public int count() {
-        if (queue == null) {
+        Queue<Object> q = queue;
+        if (q == null) {
             return 0;
+        }
+        if (isBounded) {
+            return q.size();
         }
         long diff = producerIndexShared - consumerIndexShared;
         if (diff > Integer.MAX_VALUE) {
@@ -320,7 +352,9 @@ public class RxRingBuffer implements Subscription {
             terminalState = null;
         } else {
             // decrement when we drain
-            consume();
+            if (!isBounded) {
+                consume();
+            }
         }
         return o;
     }

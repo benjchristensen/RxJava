@@ -551,45 +551,48 @@ public class OperatorMergeTest {
         }
     }
 
-    @Test
+    @Test/*(timeout = 10000)*/
     public void testConcurrencyWithBrokenOnCompleteContract() {
-        Observable<Integer> o = Observable.create(new OnSubscribe<Integer>() {
-
-            @Override
-            public void call(final Subscriber<? super Integer> s) {
-                Worker inner = Schedulers.newThread().createWorker();
-                s.add(inner);
-                inner.schedule(new Action0() {
-
-                    @Override
-                    public void call() {
-                        try {
-                            for (int i = 0; i < 10000; i++) {
-                                s.onNext(i);
+        for (int j = 0; j < 50; j++) {
+            System.out.println("testConcurrencyWithBrokenOnCompleteContract > " + j);
+            Observable<Integer> o = Observable.create(new OnSubscribe<Integer>() {
+    
+                @Override
+                public void call(final Subscriber<? super Integer> s) {
+                    Worker inner = Schedulers.newThread().createWorker();
+                    s.add(inner);
+                    inner.schedule(new Action0() {
+    
+                        @Override
+                        public void call() {
+                            try {
+                                for (int i = 0; i < 10000; i++) {
+                                    s.onNext(i);
+                                }
+                            } catch (Exception e) {
+                                s.onError(e);
                             }
-                        } catch (Exception e) {
-                            s.onError(e);
+                            s.onCompleted();
+                            s.onCompleted();
+                            s.onCompleted();
                         }
-                        s.onCompleted();
-                        s.onCompleted();
-                        s.onCompleted();
-                    }
-
-                });
+    
+                    });
+                }
+            });
+    
+            for (int i = 0; i < 10; i++) {
+                Observable<Integer> merge = Observable.merge(o.onBackpressureBuffer(), o.onBackpressureBuffer(), o.onBackpressureBuffer());
+                TestSubscriber<Integer> ts = new TestSubscriber<Integer>();
+                merge.subscribe(ts);
+    
+                ts.awaitTerminalEvent();
+                ts.assertNoErrors();
+                assertEquals(1, ts.getOnCompletedEvents().size());
+                List<Integer> onNextEvents = ts.getOnNextEvents();
+                assertEquals(30000, onNextEvents.size());
+                //                System.out.println("onNext: " + onNextEvents.size() + " onCompleted: " + ts.getOnCompletedEvents().size());
             }
-        });
-
-        for (int i = 0; i < 10; i++) {
-            Observable<Integer> merge = Observable.merge(o.onBackpressureBuffer(), o.onBackpressureBuffer(), o.onBackpressureBuffer());
-            TestSubscriber<Integer> ts = new TestSubscriber<Integer>();
-            merge.subscribe(ts);
-
-            ts.awaitTerminalEvent();
-            ts.assertNoErrors();
-            assertEquals(1, ts.getOnCompletedEvents().size());
-            List<Integer> onNextEvents = ts.getOnNextEvents();
-            assertEquals(30000, onNextEvents.size());
-            //                System.out.println("onNext: " + onNextEvents.size() + " onCompleted: " + ts.getOnCompletedEvents().size());
         }
     }
 

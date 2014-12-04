@@ -24,7 +24,7 @@ import rx.internal.util.PlatformDependent;
  * A single-producer single-consumer circular array which resizes to a higher capacity once it fills
  * its smaller buffer.
  */
-public class AtomicArrayQueueUnsafe2 extends AbstractQueue<Object> {
+public class AtomicArrayQueueUnsafe extends AbstractQueue<Object> {
     static final Object TOMBSTONE = new Object();
     static final long P_BUFFER;
     static final long ARRAY_OFFSET;
@@ -49,7 +49,7 @@ public class AtomicArrayQueueUnsafe2 extends AbstractQueue<Object> {
         HIGH_TRAFFIC_QUEUE_THRESHOLD = _size;
         
         try {
-            P_BUFFER = UnsafeAccess.UNSAFE.objectFieldOffset(AtomicArrayQueueUnsafe2.class.getDeclaredField("buffer"));
+            P_BUFFER = UnsafeAccess.UNSAFE.objectFieldOffset(AtomicArrayQueueUnsafe.class.getDeclaredField("buffer"));
         } catch (NoSuchFieldException ex) {
             throw new RuntimeException();
         }
@@ -98,7 +98,7 @@ public class AtomicArrayQueueUnsafe2 extends AbstractQueue<Object> {
         return 1 << (32 - Integer.numberOfLeadingZeros(value - 1));
     }
 
-    public AtomicArrayQueueUnsafe2(int initialCapacity, int maxCapacity) {
+    public AtomicArrayQueueUnsafe(int initialCapacity, int maxCapacity) {
         int c0;
         if (initialCapacity >= 1 << 30) {
             c0 = 1 << 30;
@@ -116,7 +116,7 @@ public class AtomicArrayQueueUnsafe2 extends AbstractQueue<Object> {
         soBuffer(new Object[c0]);;
     }
 
-    Object[] grow(Object[] b, long wo, int n, int n2) {
+    Object[] grow(Object[] b, long wi, long wo, int n, int n2) {
 
         int arrayScale = ARRAY_SCALE;
         int arrayIndexSize = ARRAY_INDEX_SIZE;
@@ -125,7 +125,8 @@ public class AtomicArrayQueueUnsafe2 extends AbstractQueue<Object> {
 
         // move the front to the back
         boolean caughtUp = false;
-        for (long i = wo - arrayIndexSize, j = wo + (n << arrayScale); i >= arrayOffset; i -= arrayIndexSize, j -= arrayIndexSize) {
+        long j = calcOffset(wi, n2 - 1) - arrayIndexSize;
+        for (long i = wo - arrayIndexSize; i >= arrayOffset; i -= arrayIndexSize, j -= arrayIndexSize) {
             Object o = lvElement(b, i);
             if (o == null || !casElement(b, i, o, TOMBSTONE)) {
                 caughtUp = true;
@@ -136,12 +137,12 @@ public class AtomicArrayQueueUnsafe2 extends AbstractQueue<Object> {
         // leave everything beyont the wrap point at its location
         if (!caughtUp) {
             long no = arrayOffset + (n << arrayScale);
-            for (long i = no; i >= wo; i -= arrayIndexSize) {
+            for (long i = no; i >= wo; i -= arrayIndexSize, j -= arrayIndexSize) {
                 Object o = lvElement(b, i);
                 if (o == null || !casElement(b, i, o, TOMBSTONE)) {
                     break;
                 }
-                soElement(b2, i, o);
+                soElement(b2, j, o);
             }
         }
 
@@ -153,18 +154,19 @@ public class AtomicArrayQueueUnsafe2 extends AbstractQueue<Object> {
     @Override
     public boolean offer(Object o) {
         long wi = writerIndex;
+        int q = maxCapacity;
 
         Object[] b = lpBuffer();
 
-        int n = b.length - 1;
+        int bl = b.length;
+        int n = bl - 1;
         long wo = calcOffset(wi, n);
-        if (lvElement(b, wo) != null || wi >= HIGH_TRAFFIC_QUEUE_THRESHOLD) {
-            int q = maxCapacity;
+        if (lvElement(b, wo) != null || (bl < q && wi >= HIGH_TRAFFIC_QUEUE_THRESHOLD)) {
             if (n + 1 == q) {
                 return false;
             }
             // grow
-            b = grow(b, wo, n, q);
+            b = grow(b, wi, wo, n, q);
             wo = calcOffset(wi, q - 1);
         }
         soElement(b, wo, o);

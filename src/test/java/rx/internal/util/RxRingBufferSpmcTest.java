@@ -20,10 +20,9 @@ import static org.junit.Assert.assertEquals;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
+import org.junit.*;
 
-import rx.Producer;
-import rx.Scheduler;
+import rx.*;
 import rx.exceptions.MissingBackpressureException;
 import rx.functions.Action0;
 import rx.observers.TestSubscriber;
@@ -40,6 +39,7 @@ public class RxRingBufferSpmcTest extends RxRingBufferBase {
      * Single producer, 2 consumers. The request() ensures it gets scheduled back on the same Producer thread.
      */
     @Test
+    @Ignore // won't work with spsc
     public void testConcurrency() throws InterruptedException {
         final RxRingBuffer b = createRingBuffer();
         final CountDownLatch emitLatch = new CountDownLatch(255);

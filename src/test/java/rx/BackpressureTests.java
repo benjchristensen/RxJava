@@ -180,7 +180,9 @@ public class BackpressureTests {
         // even though we only need 10, it will request at least RxRingBuffer.SIZE, and then as it drains keep requesting more
         // and then it will be non-deterministic when the take() causes the unsubscribe as it is scheduled on 10 different schedulers (threads)
         // normally this number is ~250 but can get up to ~1200 when RxRingBuffer.SIZE == 1024
-        assertTrue(c.get() <= RxRingBuffer.SIZE * 2);
+        int actual = c.get();
+        int expected = RxRingBuffer.SIZE * 2;
+        assertTrue("actual = " + actual + " > " + expected, actual <= expected);
     }
 
     @Test
