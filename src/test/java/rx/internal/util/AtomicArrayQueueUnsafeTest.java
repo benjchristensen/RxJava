@@ -135,7 +135,7 @@ public class AtomicArrayQueueUnsafeTest {
     }
     @Test
     public void testSize() {
-        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        AtomicArrayQueueUnsafe queue = new AtomicArrayQueueUnsafe(4, 16);
         for (int i = 0; i < 2; i++) {
             assertTrue(queue.offer(i));
         }
@@ -143,7 +143,7 @@ public class AtomicArrayQueueUnsafeTest {
     }
     @Test
     public void testSizeAfterGrowth() {
-        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        AtomicArrayQueueUnsafe queue = new AtomicArrayQueueUnsafe(4, 16);
         for (int i = 0; i < 12; i++) {
             assertTrue(queue.offer(i));
         }
@@ -151,7 +151,7 @@ public class AtomicArrayQueueUnsafeTest {
     }
     @Test
     public void testPeek() {
-        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        AtomicArrayQueueUnsafe queue = new AtomicArrayQueueUnsafe(4, 16);
         queue.offer(1);
         for (int i = 0; i < 10; i++) {
             assertEquals(1, queue.peek());
@@ -164,7 +164,7 @@ public class AtomicArrayQueueUnsafeTest {
     }
     @Test
     public void testPeekBeforeAfterGrow() {
-        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        AtomicArrayQueueUnsafe queue = new AtomicArrayQueueUnsafe(4, 16);
         queue.offer(1);
         queue.offer(2);
         queue.offer(3);
