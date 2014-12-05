@@ -32,7 +32,7 @@ public class RxRingBuffer implements Subscription {
         Queue<Object> q;
         boolean bounded;
 //        if (UnsafeAccess.isUnsafeAvailable()) {
-//            q = new AtomicArrayQueueUnsafe(4, SIZE);
+//            q = new AtomicArrayQueue(4, SIZE);
 //            bounded = true;
 //        } else {
             q = new SpscLinkedQueue<Object>();
@@ -49,8 +49,9 @@ public class RxRingBuffer implements Subscription {
         boolean bounded;
         if (UnsafeAccess.isUnsafeAvailable()) {
 //            q = new AtomicArrayQueue(4, SIZE);
-//            q = new SpscArrayQueue<Object>(SIZE * 2); // the lookahead gives trouble with the effective capacity
-            q = new AtomicArrayQueueUnsafe(4, SIZE); // the lookahead gives trouble with the effective capacity
+            q = new SpscArrayQueue<Object>(SIZE * 2); // the lookahead gives trouble with the effective capacity
+//            q = new AtomicArrayQueuePadded(4, SIZE); // the lookahead gives trouble with the effective capacity
+//            q = new AtomicArrayQueueUnsafe(4, SIZE); // the lookahead gives trouble with the effective capacity
             bounded = true;
         } else {
             q = new SpscLinkedQueue<Object>();

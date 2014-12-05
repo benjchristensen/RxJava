@@ -133,4 +133,55 @@ public class AtomicArrayQueueUnsafeTest {
             assertEquals("a", ring.poll());
         }
     }
+    @Test
+    public void testSize() {
+        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        for (int i = 0; i < 2; i++) {
+            assertTrue(queue.offer(i));
+        }
+        assertEquals(2, queue.size());
+    }
+    @Test
+    public void testSizeAfterGrowth() {
+        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        for (int i = 0; i < 12; i++) {
+            assertTrue(queue.offer(i));
+        }
+        assertEquals(12, queue.size());
+    }
+    @Test
+    public void testPeek() {
+        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        queue.offer(1);
+        for (int i = 0; i < 10; i++) {
+            assertEquals(1, queue.peek());
+        }
+        assertEquals(1, queue.poll());
+        for (int i = 0; i < 10; i++) {
+            assertEquals(null, queue.peek());
+        }
+        assertEquals(null, queue.poll());
+    }
+    @Test
+    public void testPeekBeforeAfterGrow() {
+        AtomicArrayQueue queue = new AtomicArrayQueue(4, 16);
+        queue.offer(1);
+        queue.offer(2);
+        queue.offer(3);
+        queue.offer(4);
+        
+        assertEquals(1, queue.peek());
+
+        queue.offer(5);
+        queue.offer(6);
+        queue.offer(7);
+        queue.offer(8);
+        
+        queue.poll();
+        queue.poll();
+        queue.poll();
+        queue.poll();
+        
+        assertEquals(5, queue.peek());
+    }
 }

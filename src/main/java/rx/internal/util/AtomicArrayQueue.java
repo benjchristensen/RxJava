@@ -133,7 +133,7 @@ public class AtomicArrayQueue extends AbstractQueue<Object> {
         AtomicReferenceArray<Object> b = lvBuffer();
         int lm = largeMask;
         int bl = b.length();
-        if (bl >= lm + 1) {
+        if (bl > lm) {
             int wo = offsetLarge(wi, lm);
             if (lvElement(b, wo) != null) {
                 return false;
@@ -160,7 +160,7 @@ public class AtomicArrayQueue extends AbstractQueue<Object> {
         long ri = lpReaderIndex();
         for (;;) {
             AtomicReferenceArray<Object> b = lvBuffer();
-            if (b.length() >= lm + 1) {
+            if (b.length() > lm) {
                 int ro = offsetLarge(ri, lm);
                 Object o = lvElement(b, ro);
                 if (o == null) {
@@ -190,7 +190,7 @@ public class AtomicArrayQueue extends AbstractQueue<Object> {
         long ri = lpReaderIndex();
         for (;;) {
             AtomicReferenceArray<Object> b = lvBuffer();
-            if (b.length() > lm + 1) {
+            if (b.length() > lm) {
                 int ro = offsetLarge(ri, lm);
                 Object o = lvElement(b, ro);
                 return o;
@@ -209,6 +209,33 @@ public class AtomicArrayQueue extends AbstractQueue<Object> {
     }
     @Override
     public int size() {
-        return 0;
+        int result = 0;
+        int lm = largeMask;
+        int sm = smallMask;
+        long ri = lpReaderIndex();
+        AtomicReferenceArray<Object> b = lvBuffer();
+        for (;;) {
+            if (b.length() > lm) {
+                int ro = offsetLarge(ri, lm);
+                Object o = lvElement(b, ro);
+                if (o == null) {
+                    return result;
+                }
+                result++;
+                ri++;
+            } else {
+                int ro = offsetSmall(ri, sm);
+                Object o = lvElement(b, ro);
+                if (o == null) {
+                    return result;
+                } else
+                if (o == TOMBSTONE) {
+                    b = lvBuffer();
+                } else {
+                    result++;
+                    ri++;
+                }
+            }
+        }
     }
 }
